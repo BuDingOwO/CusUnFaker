@@ -1,21 +1,59 @@
 from PIL import Image
 import os
+import re
+from io import BytesIO
+import base64
+
+
+def base64_to_image(base64_str: str) -> Image.Image:
+    base64_data = re.sub('^data:image/.+;base64,', '', base64_str)
+    byte_data = base64.b64decode(base64_data)
+    image_data = BytesIO(byte_data)
+    img = Image.open(image_data)
+    return img
+
+
+def image_to_base64(image: Image.Image, fmt='png') -> str:
+    output_buffer = BytesIO()
+    image.save(output_buffer, format=fmt)
+    byte_data = output_buffer.getvalue()
+    base64_str = base64.b64encode(byte_data).decode('utf-8')
+    return f'data:image/{fmt};base64,' + base64_str
 
 
 def BuildImg():
-    BasePath = os.path.dirname(os.path.abspath(__file__))
+    Base64_WaterMark = "data:image/png;base64,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"
+    # BasePath = os.path.dirname(os.path.abspath(__file__))
+    BasePath = os.getcwd().replace("\\", "/")
     InPut = BasePath + "/源文件/"
     OutPut = BasePath + "/成品/"
-    files = os.listdir(BasePath + "/" + "源文件")
-    WaterMark = Image.open(BasePath + "/src/logo.png")
 
+    if not os.path.exists(InPut):
+        os.mkdir(InPut)
+    if not os.path.exists(OutPut):
+        os.mkdir(OutPut)
+
+    files = os.listdir(BasePath + "/" + "源文件")
+    out_files = os.listdir(BasePath + "/" + "成品")
+
+    for FileName in out_files:
+        os.remove(OutPut + FileName)
+
+    try:
+        WaterMark = Image.open(BasePath + "/src/logo.png")
+    except FileNotFoundError:
+        WaterMark = base64_to_image(Base64_WaterMark)
+    WaterMark.convert("RGBA")
+    WaterMark_Height = WaterMark.height
+    WaterMark_Width = WaterMark.width
     print(files)
     if len(files) > 1:
         for FileName in files:
             Img = Image.open(InPut + FileName)
             Height = Img.height
             Width = Img.width
-            Img.paste(WaterMark, (Height - 50, Width - 50, Height, Width))
+            print(f"Height: {Height},Width: {Width}")
+            Img.paste(WaterMark, (Width - WaterMark_Width, Height - WaterMark_Height), mask=WaterMark)
             Img.save(OutPut + FileName)
             print("Good x 2")
     if len(files) == 1:
@@ -23,9 +61,10 @@ def BuildImg():
         Height = Img.height
         Width = Img.width
         print(f"Height: {Height},Width: {Width}")
-        Img.paste(WaterMark, (Height - 250, Width - 150))
+        Img.paste(WaterMark, (Width - WaterMark_Width, Height - WaterMark_Height), mask=WaterMark)
         Img.save(OutPut + files[0])
         print("Good")
+    print(BasePath)
 
 
 BuildImg()
